@@ -135,7 +135,7 @@
 
       <details class="filters" id="filters">
         <summary>Filters and match terms</summary>
-        <p>Items are matched by keyword against each document's title and abstract. The count says "matched", not "relevant": keyword matching misses some items and catches some noise. Edit the terms to suit; they're saved in this browser.</p>
+        <p>Items are matched by keyword against each document's title and abstract. The count says "matched", not "relevant": keyword matching misses some items and catches some noise. Mortgage-only CFPB documents are left out. Edit the terms to suit; they're saved in this browser.</p>
         <div class="grid">
           <div><div class="lbl">CFPB terms</div><textarea id="tCFPB"></textarea></div>
           <div><div class="lbl">FTC terms</div><textarea id="tFTC"></textarea></div>
@@ -200,6 +200,8 @@
   function dedupe(a){var seen={};return a.filter(function(x){if(seen[x.document_number]) return false; seen[x.document_number]=1; return true;});}
 
   function matches(d){
+    var txt=((d.title||"")+" "+(d.abstract||""));
+    if(d._ag==="CFPB" && /mortgage|real estate settlement|home equity/i.test(txt) && !/vehicle|automobile|auto loan|auto financ/i.test(txt)) return false;
     var list=terms[d._ag]||[];
     var hay=((d.title||"")+" "+(d.abstract||"")).toLowerCase();
     return list.some(function(t){return t && hay.indexOf(t.toLowerCase())>=0;});
