@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servicing rule changes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF9F5; --ink:#141413; --muted:#77746C; --line:#E3DACC; --card:#F1EEE7; --white:#FFFEFB;
+    --due:#8A4B1F; --ok:#2E6B48;
+    --serif:'Newsreader',Georgia,serif; --sans:'DM Sans','Helvetica Neue',Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px;}
+  nav.top{border-bottom:1px solid var(--line);}
+  nav.top .wrap{display:flex;justify-content:space-between;align-items:center;height:64px;gap:14px;}
+  .mark{font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:15px;}
+  .mark span{color:var(--muted);font-weight:400;}
+  .links{display:flex;gap:22px;font-size:14px;}
+  .links a{color:var(--ink);text-decoration:none;}
+  .links a:hover{text-decoration:underline;text-underline-offset:4px;}
+  @media (max-width:640px){.links{display:none;}}
+  .pill{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:999px;padding:8px 18px;font-family:var(--sans);font-size:14px;color:var(--bg);background:var(--ink);cursor:pointer;}
+  .pill-o{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 18px;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--white);cursor:pointer;}
+  .pill:focus-visible,.pill-o:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--ink);outline-offset:3px;}
+  header.hero{padding:56px 0 34px;border-bottom:1px solid var(--line);}
+  .src{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
+  .src .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);}
+  .src .dot.stale{background:#B98B4A;} .src .dot.off{background:#C8C3B8;}
+  h1{font-family:var(--sans);font-weight:700;font-size:clamp(36px,6vw,60px);line-height:1.04;letter-spacing:-.025em;margin:18px 0 18px;max-width:17ch;}
+  h1 u{text-decoration-thickness:3px;text-underline-offset:7px;}
+  .sub{font-family:var(--serif);font-size:20px;line-height:1.55;max-width:56ch;margin:0;}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;}
+  .seg{display:inline-flex;gap:6px;flex-wrap:wrap;}
+  .seg button{font-family:var(--sans);font-size:14px;border:1px solid var(--line);background:var(--white);color:var(--ink);border-radius:999px;padding:6px 16px;cursor:pointer;}
+  .seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg);}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px 26px;margin-top:26px;}
+  .lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+  .timeline{display:flex;gap:12px;overflow-x:auto;padding:14px 2px 4px;scroll-snap-type:x mandatory;}
+  .tcard{flex:0 0 240px;scroll-snap-align:start;background:var(--white);border:1px solid var(--line);border-radius:14px;padding:14px 16px;color:inherit;text-decoration:none;}
+  .tcard .when{font-size:13px;font-weight:600;color:var(--due);}
+  .tcard .t{font-size:14px;margin:6px 0 8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .tcard .k{font-size:12px;color:var(--muted);}
+  .empty{color:var(--muted);font-size:14px;padding:10px 0;}
+  .list{margin-top:4px;}
+  .item{border-top:1px solid var(--line);}
+  .item:first-child{border-top:none;}
+  .item > summary{list-style:none;display:grid;grid-template-columns:150px minmax(0,1fr) 230px;gap:16px;padding:16px 2px;cursor:pointer;align-items:start;}
+  .item > summary::-webkit-details-marker{display:none;}
+  @media (max-width:720px){.item > summary{grid-template-columns:1fr;gap:6px;}}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;}
+  .tag{white-space:nowrap;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:1px 10px;color:var(--muted);background:var(--white);}
+  .tag.ag{color:var(--bg);background:var(--ink);border-color:var(--ink);}
+  .title{font-size:16px;font-weight:600;letter-spacing:-.005em;}
+  .title small{display:block;color:var(--muted);font-size:13px;margin-top:3px;font-weight:400;}
+  .dates{font-size:13px;color:var(--muted);text-align:right;}
+  .dates b{color:var(--ink);font-weight:500;white-space:nowrap;}
+  .dates div{white-space:nowrap;}
+  @media (max-width:720px){.dates{text-align:left;}}
+  .rec{padding:4px 2px 22px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;}
+  @media (max-width:820px){.rec{grid-template-columns:1fr;}}
+  .rec blockquote{margin:6px 0 10px;padding:12px 14px;background:var(--white);border:1px solid var(--line);border-radius:12px;font-family:var(--serif);font-size:16px;line-height:1.5;}
+  .rec a{color:var(--ink);}
+  .rec label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;}
+  .rec input[type=text],.rec textarea{width:100%;font-family:var(--sans);font-size:14px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--white);color:var(--ink);}
+  .rec textarea{min-height:60px;resize:vertical;}
+  .rec input:focus,.rec textarea:focus{outline:2px solid var(--ink);outline-offset:0;}
+  .checks{display:grid;gap:6px;margin-top:4px;}
+  .checks label{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink);margin:0;}
+  .checks input{accent-color:var(--ink);width:16px;height:16px;}
+  .state{font-size:12px;letter-spacing:.04em;text-transform:uppercase;}
+  .state.open{color:var(--muted);} .state.prog{color:var(--due);} .state.done{color:var(--ok);}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 10px;}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;}
+  details.filters{margin-top:14px;font-size:14px;color:var(--muted);}
+  details.filters summary{cursor:pointer;color:var(--ink);text-decoration:underline;text-underline-offset:4px;width:max-content;}
+  details.filters textarea{width:100%;min-height:90px;font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:6px;background:var(--white);}
+  details.filters .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:10px;}
+  @media (max-width:820px){details.filters .grid{grid-template-columns:1fr;}}
+  .toggle{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink);}
+  .toggle input{accent-color:var(--ink);}
+  footer.foot{border-top:1px solid var(--line);margin-top:44px;padding:20px 0 48px;font-size:13px;color:var(--muted);line-height:1.6;}
+  footer.foot a{color:var(--muted);}
+</style>
+</head>
+<body>
+
+<nav class="top"><div class="wrap">
+  <div class="mark">Servicing log <span>&middot; auto lending</span></div>
+  <div class="links"><a href="#upcoming">Upcoming</a><a href="#changes">Changes</a><a href="#filters">Filters</a></div>
+  <button class="pill" id="exportMd" type="button">Export records</button>
+</div></nav>
+
+<div class="wrap">
+  <header class="hero">
+    <span class="src"><span class="dot off" id="srcDot"></span><span id="srcText">Checking the Federal Register</span></span>
+    <h1 id="headline">Loading changes</h1>
+    <p class="sub" id="sub">CFPB, FTC and FCC rules and notices that touch auto loan servicing, collections, credit reporting and automated borrower calls.</p>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Window">
+        <button type="button" data-win="30" aria-pressed="false">30 days</button>
+        <button type="button" data-win="90" aria-pressed="true">90 days</button>
+        <button type="button" data-win="180" aria-pressed="false">180 days</button>
+      </div>
+      <div class="seg" role="group" aria-label="Agency">
+        <button type="button" data-ag="all" aria-pressed="true">All</button>
+        <button type="button" data-ag="CFPB" aria-pressed="false">CFPB</button>
+        <button type="button" data-ag="FTC" aria-pressed="false">FTC</button>
+        <button type="button" data-ag="FCC" aria-pressed="false">FCC</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="panel" id="upcoming" aria-label="Upcoming dates">
+    <div>
+      <div class="lbl">Upcoming effective dates and comment deadlines</div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="changes" aria-label="Changes">
+    <div>
+      <div class="toolbar">
+        <div class="lbl" id="countLbl">Changes</div>
+        <div class="actions">
+          <button class="pill-o" id="exportCsv" type="button">Download CSV</button>
+        </div>
+      </div>
+      <div class="list" id="list"></div>
+
+      <details class="filters" id="filters">
+        <summary>Filters and match terms</summary>
+        <p>Items are matched by keyword against each document's title and abstract. The count says "matched", not "relevant": keyword matching misses some items and catches some noise. Edit the terms to suit; they're saved in this browser.</p>
+        <div class="grid">
+          <div><div class="lbl">CFPB terms</div><textarea id="tCFPB"></textarea></div>
+          <div><div class="lbl">FTC terms</div><textarea id="tFTC"></textarea></div>
+          <div><div class="lbl">FCC terms</div><textarea id="tFCC"></textarea></div>
+        </div>
+        <p class="toggle"><input type="checkbox" id="unfiltered"> <label for="unfiltered">Show unfiltered: skip the keyword match (every CFPB document, plus every FTC and FCC document the topic searches returned)</label></p>
+        <p class="toggle"><input type="checkbox" id="hideAdmin" checked> <label for="hideAdmin">Exclude administrative notices (titles containing: <span id="adminList"></span>)</label></p>
+        <p class="toggle"><input type="checkbox" id="showTypes" checked> <label for="showTypes">Include notices (untick for final and proposed rules only)</label></p>
+      </details>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>A tracker, not legal advice. Source: the Federal Register API (federalregister.gov), queried live in your browser, with a daily snapshot as fallback. Summaries are the Federal Register's own abstracts. Change records are saved only in this browser and export as Markdown or CSV.</p>
+    <p>Concept by Jake Makking-Robinson. Not affiliated with Salient and not an official Salient document.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var API="https://www.federalregister.gov/api/v1/documents.json";
+  var FIELDS=["title","type","abstract","document_number","html_url","publication_date","effective_on","comments_close_on","agencies"];
+  var AG={CFPB:"consumer-financial-protection-bureau",FTC:"federal-trade-commission",FCC:"federal-communications-commission"};
+  var DEFAULT_TERMS={
+    CFPB:["motor vehicle","auto loan","automobile","vehicle financ","auto financ","Regulation F","debt collection","Fair Debt Collection","Truth in Lending","Regulation Z","Consumer Leasing","Regulation M","Equal Credit","Regulation B","Fair Credit Reporting","Regulation V","larger participant","repossession","servicer","servicing","collections","Servicemembers","Military Lending","unfair, deceptive"],
+    FTC:["motor vehicle","auto","dealer","Holder Rule","Holder in Due Course","CARS Rule","debt collection","Fair Credit Reporting","credit reporting","repossession"],
+    FCC:["Telephone Consumer Protection","TCPA","robocall","robotext","prerecorded voice","artificial voice","AI-generated","autodialer","call blocking","caller ID","revocation of consent"]
+  };
+  var ADMIN=["Privacy Act of 1974","System of Records","Sunshine Act","Open Commission Meeting","Information Collection","Proposed Collection","Comment Request","Paperwork Reduction","Submission for OMB Review","Agency Meeting"];
+  var FTC_QUERIES=["\"motor vehicle\"","\"Holder Rule\"","\"debt collection\"","\"Fair Credit Reporting\""];
+  var FCC_QUERIES=["\"Telephone Consumer Protection\"","robocall","\"prerecorded voice\"","\"artificial intelligence\" calls"];
+  var STORE="ssl-records-v1", TSTORE="ssl-terms-v1";
+  var state={win:90,ag:"all",docs:[],source:"none",checkedAt:null};
+  var $=function(id){return document.getElementById(id);};
+  function ls(k,v){try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)||"null"); localStorage.setItem(k,JSON.stringify(v)); }catch(e){ return null; }}
+
+  var terms = ls(TSTORE) || DEFAULT_TERMS;
+  if(!terms.FTC) terms=DEFAULT_TERMS;
+  $("tCFPB").value = terms.CFPB.join("\n"); $("tFTC").value = terms.FTC.join("\n"); $("tFCC").value = terms.FCC.join("\n");
+
+  var todayISO = new Date().toISOString().slice(0,10);
+  function addDays(iso,n){var d=new Date(iso+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+  function daysBetween(a,b){return Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/864e5);}
+  function fmt(iso){return iso?new Date(iso+"T00:00:00Z").toLocaleDateString("en-US",{timeZone:"UTC",month:"short",day:"numeric",year:"numeric"}):"";}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+
+  function url(params){
+    var q=["per_page=100","order=newest"].concat(FIELDS.map(function(f){return "fields[]="+f;}));
+    Object.keys(params).forEach(function(k){ [].concat(params[k]).forEach(function(v){ q.push(encodeURIComponent(k)+"="+encodeURIComponent(v)); }); });
+    return API+"?"+q.join("&");
+  }
+  function getJSON(u){return fetch(u).then(function(r){if(!r.ok) throw new Error("HTTP "+r.status); return r.json();});}
+
+  function fetchLive(){
+    var since=addDays(todayISO,-180), types=["RULE","PRORULE","NOTICE"];
+    var reqs=[
+      {ag:"CFPB",u:url({"conditions[agencies][]":AG.CFPB,"conditions[type][]":types,"conditions[publication_date][gte]":since})},
+    ].concat(FTC_QUERIES.map(function(t){return {ag:"FTC",u:url({"conditions[agencies][]":AG.FTC,"conditions[type][]":types,"conditions[publication_date][gte]":since,"conditions[term]":t})};})).concat(FCC_QUERIES.map(function(t){return {ag:"FCC",u:url({"conditions[agencies][]":AG.FCC,"conditions[type][]":types,"conditions[publication_date][gte]":since,"conditions[term]":t})};}));
+    return Promise.all(reqs.map(function(r){return getJSON(r.u).then(function(d){return (d.results||[]).map(function(x){x._ag=r.ag;return x;});});}))
+      .then(function(arrs){return dedupe([].concat.apply([],arrs));});
+  }
+  function dedupe(a){var seen={};return a.filter(function(x){if(seen[x.document_number]) return false; seen[x.document_number]=1; return true;});}
+
+  function matches(d){
+    var list=terms[d._ag]||[];
+    var hay=((d.title||"")+" "+(d.abstract||"")).toLowerCase();
+    return list.some(function(t){return t && hay.indexOf(t.toLowerCase())>=0;});
+  }
+
+  function visible(){
+    var since=addDays(todayISO,-state.win), unf=$("unfiltered").checked, notices=$("showTypes").checked;
+    return state.docs.filter(function(d){
+      if(d.publication_date<since) return false;
+      if(state.ag!=="all" && d._ag!==state.ag) return false;
+      if(!notices && d.type==="Notice") return false;
+      if($("hideAdmin").checked && ADMIN.some(function(t){return (d.title||"").toLowerCase().indexOf(t.toLowerCase())>=0;})) return false;
+      return unf || matches(d);
+    }).sort(function(a,b){return b.publication_date.localeCompare(a.publication_date);});
+  }
+  function nextDate(d){
+    var out=[];
+    if(d.effective_on && d.effective_on>=todayISO) out.push({k:"Effective",d:d.effective_on});
+    if(d.comments_close_on && d.comments_close_on>=todayISO) out.push({k:"Comments close",d:d.comments_close_on});
+    return out.sort(function(a,b){return a.d.localeCompare(b.d);})[0]||null;
+  }
+
+  var recs = ls(STORE) || {};
+  function rec(id){return recs[id]||(recs[id]={why:"",owner:"",approved:"",plan:"",c:[false,false,false,false]});}
+  var CHECKS=["Policy or procedure updated","Agent scripts and QA rubric updated","Change tested before rollout","Sign-off filed"];
+  function recState(id){var r=recs[id]; if(!r) return "open"; var n=r.c.filter(Boolean).length; if(n===4) return "done"; if(n||r.owner||r.plan||r.why) return "prog"; return "open";}
+  var STATE_TXT={open:"No record",prog:"In progress",done:"Closed out"};
+
+  function render(){
+    var v=visible(), up=v.map(function(d){return {d:d,n:nextDate(d)};}).filter(function(x){return x.n;}).sort(function(a,b){return a.n.d.localeCompare(b.n.d);});
+    var horizon=addDays(todayISO,60);
+    var soon=up.filter(function(x){return x.n.d<=horizon;}).length;
+    if(state.source==="none"){ $("headline").textContent="Couldn't reach the Federal Register"; }
+    else $("headline").innerHTML = "<u>"+v.length+" rule change"+(v.length===1?"":"s")+"</u> in the last "+state.win+" days. "+(soon? soon+(soon===1?" falls":" fall")+" due before "+fmt(horizon).replace(/, \d{4}$/,"")+"." : "Nothing falls due in the next 60 days.");
+    $("countLbl").textContent=v.length+" matched · newest first";
+
+    $("timeline").innerHTML = up.length ? up.map(function(x){
+      var dd=daysBetween(todayISO,x.n.d);
+      return '<a class="tcard" href="#doc-'+esc(x.d.document_number)+'" style="color:inherit;text-decoration:none"><div class="when">'+esc(fmt(x.n.d))+' · '+(dd===0?"today":"in "+dd+" day"+(dd===1?"":"s"))+'</div><div class="t">'+esc(x.d.title)+'</div><div class="k">'+esc(x.d._ag)+' · '+esc(x.n.k)+'</div></a>';
+    }).join("") : '<div class="empty">No effective dates or comment deadlines ahead in this view.</div>';
+
+    $("list").innerHTML = v.length ? v.map(function(d){
+      var n=nextDate(d), st=recState(d.document_number), r=recs[d.document_number]||rec(d.document_number);
+      var dates = '<div>Published <b>'+esc(fmt(d.publication_date))+'</b></div>' +
+        (d.effective_on?'<div>Effective <b>'+esc(fmt(d.effective_on))+'</b></div>':'') +
+        (d.comments_close_on?'<div>Comments close <b>'+esc(fmt(d.comments_close_on))+'</b></div>':'');
+      return '<details class="item" id="doc-'+esc(d.document_number)+'" data-id="'+esc(d.document_number)+'"><summary>'+
+        '<div class="tags"><span class="tag ag">'+esc(d._ag)+'</span><span class="tag">'+esc(d.type)+'</span></div>'+
+        '<div class="title">'+esc(d.title)+'<small><span class="state '+st+'">'+STATE_TXT[st]+'</span>'+(n?' · '+esc(n.k.toLowerCase())+' in '+daysBetween(todayISO,n.d)+' days':'')+'</small></div>'+
+        '<div class="dates">'+dates+'</div></summary>'+
+        '<div class="rec"><div>'+
+          '<div class="lbl">What changed (Federal Register summary)</div>'+
+          '<blockquote>'+esc(d.abstract||"No abstract published. Open the document for the full text.")+'</blockquote>'+
+          '<a href="'+esc(d.html_url)+'" target="_blank" rel="noopener">Open on federalregister.gov ↗</a> <span class="lbl" style="margin-left:8px">FR doc '+esc(d.document_number)+'</span>'+
+        '</div><div>'+
+          '<label>Why it matters</label><textarea data-f="why" placeholder="For your team to fill in">'+esc(r.why)+'</textarea>'+
+          '<label>Owner</label><input type="text" data-f="owner" value="'+esc(r.owner)+'">'+
+          '<label>Approved by</label><input type="text" data-f="approved" value="'+esc(r.approved)+'">'+
+          '<label>Rollout plan</label><textarea data-f="plan">'+esc(r.plan)+'</textarea>'+
+          '<label>Evidence</label><div class="checks">'+CHECKS.map(function(c,i){return '<label><input type="checkbox" data-c="'+i+'"'+(r.c[i]?' checked':'')+'> '+c+'</label>';}).join("")+'</div>'+
+        '</div></div></details>';
+    }).join("") : '<div class="empty">Nothing matched in this window. Try 180 days or show unfiltered.</div>';
+
+    // drop untouched empty records created during render
+    Object.keys(recs).forEach(function(k){var r=recs[k]; if(!r.why&&!r.owner&&!r.approved&&!r.plan&&!r.c.some(Boolean)) delete recs[k];});
+
+
+  }
+
+  $("list").addEventListener("input",function(e){
+    var item=e.target.closest(".item"); if(!item) return;
+    var id=item.dataset.id, r=rec(id);
+    if(e.target.dataset.f) r[e.target.dataset.f]=e.target.value;
+    if(e.target.dataset.c!==undefined) r.c[+e.target.dataset.c]=e.target.checked;
+    ls(STORE,recs);
+    var st=recState(id), el=item.querySelector(".state"); el.className="state "+st; el.textContent=STATE_TXT[st];
+  });
+
+  document.querySelectorAll("[data-win]").forEach(function(b){b.addEventListener("click",function(){
+    state.win=+b.dataset.win; document.querySelectorAll("[data-win]").forEach(function(x){x.setAttribute("aria-pressed",String(x===b));}); render();});});
+  document.querySelectorAll("[data-ag]").forEach(function(b){b.addEventListener("click",function(){
+    state.ag=b.dataset.ag; document.querySelectorAll("[data-ag]").forEach(function(x){x.setAttribute("aria-pressed",String(x===b));}); render();});});
+  $("adminList").textContent=ADMIN.join(", ");
+  ["unfiltered","showTypes","hideAdmin"].forEach(function(id){$(id).addEventListener("change",render);});
+  ["tCFPB","tFTC","tFCC"].forEach(function(id){$(id).addEventListener("input",function(){
+    var rd=function(i){return $(i).value.split("\n").map(function(s){return s.trim();}).filter(Boolean);};
+    terms={CFPB:rd("tCFPB"),FTC:rd("tFTC"),FCC:rd("tFCC")};
+    ls(TSTORE,terms); render();});});
+
+  function download(name,text,type){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;document.body.appendChild(a);a.click();a.remove();}
+  function rowsForExport(){return visible().map(function(d){var r=recs[d.document_number]||{why:"",owner:"",approved:"",plan:"",c:[false,false,false,false]};return {d:d,r:r};});}
+  $("exportCsv").addEventListener("click",function(){
+    var head=["agency","type","title","fr_document","published","effective","comments_close","status","why_it_matters","owner","approved_by","rollout_plan"].concat(CHECKS),
+        q=function(s){return '"'+String(s==null?"":s).replace(/"/g,'""')+'"';};
+    var lines=[head.map(q).join(",")].concat(rowsForExport().map(function(x){var d=x.d,r=x.r;
+      return [d._ag,d.type,d.title,d.document_number,d.publication_date,d.effective_on||"",d.comments_close_on||"",STATE_TXT[recState(d.document_number)],r.why,r.owner,r.approved,r.plan].concat(r.c.map(function(c){return c?"yes":"no";})).map(q).join(",");}));
+    download("servicing-change-log-"+todayISO+".csv",lines.join("\n"),"text/csv");
+  });
+  $("exportMd").addEventListener("click",function(){
+    var out=["# Servicing rule change log","","Exported "+todayISO+". Window: last "+state.win+" days. Source: Federal Register API. Tracker, not legal advice.",""];
+    rowsForExport().forEach(function(x){var d=x.d,r=x.r;
+      out.push("## "+d.title,"","- Agency: "+d._ag+" ("+d.type+")","- FR document: "+d.document_number+" ("+d.html_url+")","- Published: "+d.publication_date+(d.effective_on?" · Effective: "+d.effective_on:"")+(d.comments_close_on?" · Comments close: "+d.comments_close_on:""),
+        "- Status: "+STATE_TXT[recState(d.document_number)],"","**What changed (Federal Register summary).** "+(d.abstract||"No abstract published."),"","**Why it matters.** "+(r.why||"—"),"","**Owner.** "+(r.owner||"—")+"  ","**Approved by.** "+(r.approved||"—")+"  ","**Rollout plan.** "+(r.plan||"—"),"","**Evidence**");
+      CHECKS.forEach(function(c,i){out.push("- ["+(r.c[i]?"x":" ")+"] "+c);}); out.push("");});
+    download("servicing-change-log-"+todayISO+".md",out.join("\n"),"text/markdown");
+  });
+
+  function setSource(kind,when){
+    state.source=kind; state.checkedAt=when;
+    $("srcDot").className="dot"+(kind==="live"?"":kind==="snapshot"?" stale":" off");
+    $("srcText").textContent = kind==="live" ? "Live from the Federal Register · checked "+when
+      : kind==="snapshot" ? "Federal Register · updated "+when
+      : "Federal Register unavailable right now";
+  }
+
+  fetchLive().then(function(docs){
+    state.docs=docs; setSource("live",new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})); render();
+  }).catch(function(){
+    return getJSON("data.json?v="+todayISO).then(function(d){
+      state.docs=d.results||[]; setSource("snapshot",new Date(d.generated).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"UTC",timeZoneName:"short"})); render();
+    });
+  }).catch(function(){ setSource("none"); render(); });
+})();
+</script>
+</body>
+</html>
